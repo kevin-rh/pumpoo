@@ -32,6 +32,37 @@ Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
 int cursor = 0;
 String num_input = "";
 LiquidCrystal_I2C lcd(0x27,20,4);
+int animation_index = 0;
+
+uint8_t big_heart[8] = {
+  0x00, 0x0a, 0x1f, 0x1f, 0x0e, 0x04, 0x00};
+uint8_t small_heart[8] = {
+  0x00, 0x00, 0x0a, 0x0e, 0x04, 0x00, 0x00};
+uint8_t rain_0[8] = {
+  0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+uint8_t rain_1[8] = {
+  0x10, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1f};
+uint8_t rain_2[8] = {
+  0x02, 0x10, 0x10, 0x00, 0x00, 0x00, 0x1f};
+uint8_t rain_3[8] = {
+  0x09, 0x02, 0x02, 0x00, 0x10, 0x10, 0x1f};
+uint8_t rain_4[8] = {
+  0x14, 0x00, 0x09, 0x00, 0x02, 0x12, 0x1f};
+uint8_t rain_5[8] = {
+  0x08, 0x00, 0x14, 0x00, 0x09, 0x0b, 0x1f};
+uint8_t rain_6[8] = {
+  0x08, 0x00, 0x14, 0x00, 0x09, 0x1f, 0x1f};
+uint8_t rain_7[8] = {
+  0x01, 0x00, 0x14, 0x00, 0x1f, 0x1f, 0x1f};
+uint8_t rain_8[8] = {
+  0x02, 0x00, 0x15, 0x1f, 0x1f, 0x1f, 0x1f};
+uint8_t rain_9[8] = {
+  0x04, 0x02, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+uint8_t rain_10[8] = {
+  0x04, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+uint8_t rain_11[8] = {
+  0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+
 
 /// Time Variable Class
 double dec_time_sec = 0; 
@@ -68,14 +99,22 @@ void turnOffPump(){
 }
 
 /// Preset Class
-int preset[10] = {0,0,0,0,0,0,0,0,0,0};
+typedef struct preset{
+  int mode;     // 1: Volume, 2: Time
+  double dec_time_sec_value; 
+}Preset;
 
-void savePreset(char key, int value){
+Preset presets[10];
+void setPreset(char key, int mode, double dec_time_sec_value){
   // Save value at the array of preset (0-9 index)
-  preset[key-'0'] = value;
+  presets[key-'0'].dec_time_sec_value = dec_time_sec_value;
+  presets[key-'0'].mode = mode;
 }
-int getPreset(char key){
-  return preset[key-'0'];
+int getPresetMode(char key){
+  return presets[key-'0'].mode;
+}
+double getPresetValue(char key){
+  return presets[key-'0'].dec_time_sec_value;
 }
 
 // State Manager Class
@@ -90,8 +129,8 @@ void changeStateTo(void (*event)(KeypadEvent)){
   done_dispensing = false;
   elapsed_time = 0;
   num_input = "";
+  animation_index = 0;
 }
-
 
 ///// Main Program /////
 
@@ -100,170 +139,51 @@ void changeStateTo(void (*event)(KeypadEvent)){
   Initialize pin output value.
 */
 
-uint8_t big_heart[8] = {
-  0b00000,
-  0b01010,
-  0b11111,
-  0b11111,
-  0b01110,
-  0b00100,
-  0b00000
-  };
-uint8_t small_heart[8] = {
-  0b00000,
-  0b00000,
-  0b01010,
-  0b01110,
-  0b00100,
-  0b00000,
-  0b00000
-  };
-uint8_t rain0[8] = {
-  0b10000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b00000,
-  };
-uint8_t rain1[8] = {
-  0b10000,
-  0b00000,
-  0b01000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b11111
-  };
-uint8_t rain2[8] = {
-  0b00010,
-  0b10000,
-  0b10000,
-  0b00000,
-  0b00000,
-  0b00000,
-  0b11111
-  };
-uint8_t rain3[8] = {
-  0b01001,
-  0b00010,
-  0b00010,
-  0b00000,
-  0b10000,
-  0b10000,
-  0b11111
-  };
-uint8_t rain4[8] = {
-  0b10100,
-  0b00000,
-  0b01001,
-  0b00000,
-  0b00010,
-  0b10010,
-  0b11111
-  };
-uint8_t rain5[8] = {
-  0b01000,
-  0b00000,
-  0b10100,
-  0b00000,
-  0b01001,
-  0b01011,
-  0b11111
-  };
-uint8_t rain6[8] = {
-  0b01000,
-  0b00000,
-  0b10100,
-  0b00000,
-  0b01001,
-  0b11111,
-  0b11111
-  };
-uint8_t rain7[8] = {
-  0b00001,
-  0b00000,
-  0b10100,
-  0b00000,
-  0b11111,
-  0b11111,
-  0b11111
-  };
-uint8_t rain8[8] = {
-  0b00010,
-  0b00000,
-  0b10101,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111
-  };
-uint8_t rain9[8] = {
-  0b00100,
-  0b00010,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111
-  };
-uint8_t rain10[8] = {
-  0b00100,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111
-  };
-uint8_t rain11[8] = {
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b11111
-  };
 void setup(){
   Serial.begin(9600);
   keypad.addEventListener(HomePageEvent); // Add an event listener for this keypad
+  
   //lcd setup
   lcd.init();
   lcd.backlight();
+  lcd.createChar(0, big_heart);
+  lcd.createChar(1, small_heart);
+  lcd.createChar(2,  rain_0);
+  lcd.createChar(3,  rain_1);
+  lcd.createChar(4,  rain_2);
+  lcd.createChar(5,  rain_3);
+  lcd.createChar(6,  rain_4);
+  lcd.createChar(7,  rain_5);
+  lcd.createChar(8,  rain_6);
+  lcd.createChar(9,  rain_7);
+  lcd.createChar(10, rain_8);
+  lcd.createChar(11, rain_9);
+  lcd.createChar(12, rain_10);
+  lcd.createChar(13, rain_11);
+  lcd.home();
+  
   //pump setup
   pinMode(enA, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
+  
   // Turn off motors - Initial state
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
 
-  lcd.createChar(0, big_heart);
-  lcd.createChar(1, small_heart);
-  lcd.createChar(2, rain0);
-  lcd.createChar(3, rain1);
-  lcd.createChar(4, rain2);
-  lcd.createChar(5, rain3);
-  lcd.createChar(6, rain4);
-  lcd.createChar(7, rain5);
-  lcd.createChar(8, rain6);
-  lcd.createChar(9, rain7);
-  lcd.createChar(10, rain8);
-  lcd.createChar(11, rain9);
-  lcd.createChar(12, rain10);
-  lcd.createChar(13, rain11);
-
-
-  lcd.home();
   start_time = millis();
+
+  // Reset Preset
+  for(char key='0'; key<='9'; key++){
+    setPreset(key, 0, 0);
+  }
 }
 
 /*  Main Loop
   Responsible of LCD print
   Take action if needed on each state
 */
+char to_print[6];
 
 void loop(){
   char customKey = keypad.getKey();
@@ -273,47 +193,23 @@ void loop(){
     lcd.setCursor(0, 0);
     lcd.print("Pumpoo         "); 
     lcd.setCursor(15,0);
-
-    long now_time = millis();
-    long delta_time = now_time - start_time;
-    if (delta_time < 200){
-      lcd.printByte(2);
-    }else if(delta_time < 400){
-      lcd.printByte(3);
-    }else if(delta_time < 600){
-      lcd.printByte(4);
-    }else if(delta_time < 800){
-      lcd.printByte(5);
-    }else if(delta_time < 1000){
-      lcd.printByte(6);
-    }else if(delta_time < 1200){
-      lcd.printByte(7);
-    }else if(delta_time < 1400){
-      lcd.printByte(8);
-    }else if(delta_time < 1600){
-      lcd.printByte(9);
-    }else if(delta_time < 1800){
-      lcd.printByte(10);
-    }else if(delta_time < 2000){
-      lcd.printByte(11);
-    }else if(delta_time < 2200){
-      lcd.printByte(12);
-    }else if(delta_time < 2400){
-      lcd.printByte(13);
+    
+    lcd.printByte(animation_index + 2);
+    
+    if ((millis() - start_time) >= 200) {
+      start_time = millis();
+      animation_index++;
+      animation_index %= 12;
     }
-    if (delta_time>2400) start_time = now_time;
-
 
     lcd.setCursor(0, 1);
     char buffer[17];
-    char to_print[17];
-    dtostrf(speed9V, 10, 9, to_print);
+    dtostrf(speed9V, 10, 9, buffer);
 
-    sprintf(buffer, "%s mL/s", to_print);
+    sprintf(buffer, "%s mL/s", buffer);
     lcd.print(buffer);
   }
-
-  if((*cur_page) == ManualFillWaterEvent)
+  else if((*cur_page) == ManualFillWaterEvent)
   {
     long pass_time = dispense_water ? (long)(millis() - start_time) : 0;
     long total_elapsed_time = elapsed_time + pass_time;
@@ -334,9 +230,8 @@ void loop(){
     sprintf(buffer,"Vol.: %s mL", doublebuf);
     lcd.setCursor(0,1);   
     lcd.print(buffer);
-    
   }
-  if((*cur_page) == SelectingModeEvent)
+  else if((*cur_page) == SelectingModeEvent)
   {
     lcd.setCursor(5,0);
     lcd.print("Select");
@@ -349,49 +244,54 @@ void loop(){
       lcd.setCursor(4,1);
       lcd.print("Time Mode");
       break;
-    case 2:
-      lcd.setCursor(3,1);
-      lcd.print("Speed Mode");
-      break;
+
     }
   }
-  if((*cur_page) == VolumeMode)
+  else if((*cur_page) == VolumeModeEvent)
   { 
+    // Title
     lcd.setCursor(0,0);
     lcd.print("<Volume>");
 
+    // Option
     lcd.setCursor(16-6,0);
     lcd.print(" OK[#]");
     lcd.setCursor(16-6,1);
     lcd.print("DEL[*]");
+
+    // Input
+    lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
+    lcd.print(BLANK_SPACE);
+
+    lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
+    lcd.print(to_print);
   }
-  else if((*cur_page) == TimeMode)
+  else if((*cur_page) == TimeModeEvent)
   {
+    // Title
     lcd.setCursor(0,0);
     lcd.print("<Time>");
 
+    // Option
     lcd.setCursor(16-6,0);
     lcd.print(" OK[#]");
     lcd.setCursor(16-6,1);
     lcd.print("DEL[*]");
-  }
-  else if((*cur_page) == SpeedMode)
-  {
-    lcd.setCursor(0,0);
-    lcd.print("<Speed>"); 
 
-    lcd.setCursor(16-6,0);
-    lcd.print(" OK[#]");
-    lcd.setCursor(16-6,1);
-    lcd.print("DEL[*]");
+    // Input
+    lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
+    lcd.print(BLANK_SPACE);
+
+    lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
+    lcd.print(to_print);
   }
-  if((*cur_page) == DispensingEvent)
+  else if((*cur_page) == DispensingEvent)
   {
     long pass_time = (long)(millis() - start_time);
     long total_elapsed_time = elapsed_time + pass_time;
     long delta_time = ((long)dec_time_sec * 1000) - total_elapsed_time;
 
-    if (delta_time>0)
+    if (delta_time > 0)
     {
       // Prepare data to be printed
       char buffer[16];
@@ -436,8 +336,7 @@ void loop(){
   }  
 }
 
-
-
+// Input Data Process 
 void HomePageEvent(KeypadEvent key){
   switch (keypad.getState()){
   case PRESSED:
@@ -453,13 +352,11 @@ void HomePageEvent(KeypadEvent key){
     break;
 
   case RELEASED:
-      // if (key == '*') {
-      // }
       break;
 
   case HOLD:
-      getPreset(key);
-      break;
+    greenBoxListener(key);
+    break;
   }
 }
 
@@ -483,35 +380,46 @@ void ManualFillWaterEvent(KeypadEvent key){
     }
     break;
   case HOLD:
-    greenBoxListener(key);
+    switch(key){
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      setPreset(key, 2, num_input.toDouble());
+      break;
+    }
     break;
   }
 }
+
 bool debounce_press = false;
 void SelectingModeEvent(KeypadEvent key){
   switch (keypad.getState()){
   case PRESSED:
-    if (key == 'D') { // Go back to Home Page
-        Serial.println("Go to HomePage"); 
-        select_state = 0; // input volume state
-        changeStateTo(HomePageEvent); 
-    }
-    if (key == 'B' or key == 'C') { // scroll up or down
-      if(debounce_press == false) debounce_press = true;
+    switch (key){
+    case 'D': // Go back to Home Page
+          Serial.println("Go to HomePage"); 
+          select_state = 0; // input volume state
+          changeStateTo(HomePageEvent); 
+      break;
+    case 'B':
+    case 'C':  // scroll up or down
+        if(debounce_press == false) debounce_press = true;
+      break;
     }
     break;
   case RELEASED:
-    if (key == 'B') { // scroll up
-      if(select_state == 0 && debounce_press == true)
-      {
-        Serial.println("Input Speed Mode-2-C");
-      }else if(select_state == 2 && debounce_press == true)
-      {
-        Serial.println("Input Time Mode-1-C");
-      }else if(select_state == 1 && debounce_press == true)
-      {
-        Serial.println("Input Volume Mode-0-C");
-      }
+    switch (key){
+    case 'B': // scroll up
+      if(select_state == 0 && debounce_press == true) Serial.println("Input Speed Mode-2-C");
+      else if(select_state == 2 && debounce_press == true) Serial.println("Input Time Mode-1-C");
+      else if(select_state == 1 && debounce_press == true) Serial.println("Input Volume Mode-0-C");
       // TODO: above this to be removed
 
       if(debounce_press == true){
@@ -519,33 +427,25 @@ void SelectingModeEvent(KeypadEvent key){
         select_state++;
         if (select_state > 2) select_state = 0;
       }
-    }
-    if (key == 'C'){ // scroll dwon
-      
-      if(select_state == 0 && debounce_press == true)
-      {
-        Serial.println("Input Speed Mode-2-C");
-      }else if(select_state == 2 && debounce_press == true)
-      {
-        Serial.println("Input Time Mode-1-C");
-      }else if(select_state == 1 && debounce_press == true)
-      {
-        Serial.println("Input Volume Mode-0-C");
-      }
+      break;
+    case 'C': // scroll down
+      if(select_state == 0 && debounce_press == true) Serial.println("Input Speed Mode-2-C");
+      else if(select_state == 2 && debounce_press == true) Serial.println("Input Time Mode-1-C");
+      else if(select_state == 1 && debounce_press == true) Serial.println("Input Volume Mode-0-C");
       // TODO: above this to be removed
+
       if(debounce_press == true){
         lcd.clear();
         debounce_press = false;
         select_state--;
         if (select_state < 0) select_state = 2;
       }
-    }
-    if(key == '#')
-    {
+      break;
+    case '#':
       switch(select_state){
       case 0:
         Serial.println("Decided to Input Volume Mode-0");
-        changeStateTo(VolumeMode); 
+        changeStateTo(VolumeModeEvent); 
         lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
         lcd.print(BLANK_SPACE);
         lcd.setCursor(INPUT_CURSOR + 1, 1);
@@ -553,17 +453,18 @@ void SelectingModeEvent(KeypadEvent key){
         break;
       case 1:
         Serial.println("Decided to Input Time Mode-1");
-        changeStateTo(TimeMode);
+        changeStateTo(TimeModeEvent);
         lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
         lcd.print(BLANK_SPACE);
         lcd.setCursor(INPUT_CURSOR + 1, 1);
         lcd.print("sec");
         break;
-      case 2:
-        Serial.println("Decided to Input Speed Mode-2");
-        changeStateTo(SpeedMode);
-        break; 
+      // case 2:
+      //   Serial.println("Decided to Input Speed Mode-2");
+      //   changeStateTo(SpeedMode);
+      //   break; 
       }
+      break;
     }
     break;
   case HOLD:
@@ -572,9 +473,8 @@ void SelectingModeEvent(KeypadEvent key){
   }
 }
 
-
 //Selecting Mode - Input Volume
-void VolumeMode(KeypadEvent key)
+void VolumeModeEvent(KeypadEvent key)
 {
   switch (keypad.getState()){
   case PRESSED:
@@ -594,6 +494,39 @@ void VolumeMode(KeypadEvent key)
       turnOnPump();
       changeStateTo(DispensingEvent);
       break;
+    case '0': case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':  
+      // Update input state
+      if (num_input.length() == MAX_INPUT_COUNT) num_input.remove(num_input.length()-1, 1);
+      num_input += key; 
+      num_input.toCharArray(to_print, 6);
+      
+      // Prepare
+      Serial.println(num_input);
+      break;
+    case '*':
+      if (num_input.length()<=0) break;
+
+      // Update input state
+      num_input[num_input.length()-1] = 0;
+      num_input.remove(num_input.length()-1, 1);
+      num_input.toCharArray(to_print, 6);
+      
+      // Prepare
+      Serial.println("del");
+      Serial.println(to_print);
+      break;
+    }
+    break;
+  case HOLD:
+    switch(key){
     case '0':
     case '1':
     case '2':
@@ -603,44 +536,19 @@ void VolumeMode(KeypadEvent key)
     case '6':
     case '7':
     case '8':
-    case '9':  
-      char to_print[6];
-      if (num_input.length() == MAX_INPUT_COUNT) num_input.remove(num_input.length()-1, 1);
-      num_input += key; 
-      num_input.toCharArray(to_print, 6);
-      
-      Serial.println(num_input);
-      
-      lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
-      lcd.print(BLANK_SPACE);
-
-      lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
-      lcd.print(to_print);
+    case '9':
+      setPreset(key, 1, num_input.toDouble());
       break;
-    case '*':
-      if (num_input.length()>0) {
-        char to_print[6];
-        num_input[num_input.length()-1] = 0;
-        num_input.remove(num_input.length()-1, 1);
-        num_input.toCharArray(to_print, 6);
-        
-        Serial.println("del");
-        Serial.println(to_print);
-
-        lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
-        lcd.print(BLANK_SPACE);
-
-        lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
-        lcd.print(to_print);
-      }
-      break;
+    // case 'B':
+    //   Serial.print("Reset counter");
+    //   break;
     }
     break;
   }
 }
 //Selecting Mode - Input Time
-void TimeMode(KeypadEvent key)
-{
+void TimeModeEvent(KeypadEvent key)
+{  
   switch (keypad.getState()){
   case PRESSED:
     switch(key){
@@ -669,36 +577,45 @@ void TimeMode(KeypadEvent key)
     case '7':
     case '8':
     case '9':  
-      char to_print[6];
+      // Update input state
       if (num_input.length() == MAX_INPUT_COUNT) num_input.remove(num_input.length()-1, 1);
       num_input += key; 
       num_input.toCharArray(to_print, 6);
       
+      // Prepare
       Serial.println(num_input);
-      
-      lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
-      lcd.print(BLANK_SPACE);
-
-      lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
-      lcd.print(to_print);
       break;
     case '*':
-      if (num_input.length()>0) {
-        char to_print[6];
-        num_input[num_input.length()-1] = 0;
-        num_input.remove(num_input.length()-1, 1);
-        num_input.toCharArray(to_print, 6);
-        
-        Serial.println("del");
-        Serial.println(to_print);
+      if (num_input.length()<=0) break;
 
-        lcd.setCursor(INPUT_CURSOR - MAX_INPUT_COUNT, 1);
-        lcd.print(BLANK_SPACE);
-
-        lcd.setCursor(INPUT_CURSOR - num_input.length(), 1);
-        lcd.print(to_print);
-      }
+      // Update input state
+      num_input[num_input.length()-1] = 0;
+      num_input.remove(num_input.length()-1, 1);
+      num_input.toCharArray(to_print, 6);
+      
+      // Prepare
+      Serial.println("del");
+      Serial.println(to_print);
       break;
+    }
+    break;
+  case HOLD:
+    switch(key){
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      setPreset(key, 2, num_input.toDouble());
+      break;
+    // case 'B':
+    //   Serial.print("Reset counter");
+    //   break;
     }
     break;
   }
@@ -706,43 +623,33 @@ void TimeMode(KeypadEvent key)
 void DispensingEvent(KeypadEvent key)
 {
   switch (keypad.getState()){
-    case PRESSED:
-      // Check if dispensing is finished.
-      if (done_dispensing == false) break; // TODO: doneDispensing
+  case PRESSED:
+    // Check if dispensing is finished.
+    if (done_dispensing == false) break;
 
-      switch(key){
-      // Go back to the Selecting Mode page.
-      case 'B':
-      case 'C': 
-        // Reset Value
-        Serial.println("Back to Selecting Mode");
-        changeStateTo(SelectingModeEvent);
-        break;
-      // Go back to Home page.
-      case 'D':
-        // Reset Value
-        changeStateTo(HomePageEvent);
-      }
-    break;
-    case HOLD:
-      if (key == 'D'){
-        // TODO: Abort STOP
-        // Reset Value
-        num_input = "";
-        turnOffPump();
-        changeStateTo(HomePageEvent);
-      }
-    break;
-  }
-}
-//Selecting Mode - Input Speed
-void SpeedMode(KeypadEvent key)
-{
-  //TODO
-  if (key == 'B'||key =='C' ) //go back to selecting mode
-  { 
+    switch(key){
+    // Go back to the Selecting Mode page.
+    case 'B':
+    case 'C': 
+      // Reset Value
       Serial.println("Back to Selecting Mode");
       changeStateTo(SelectingModeEvent);
+      break;
+    // Go back to Home page.
+    case 'D':
+      // Reset Value
+      changeStateTo(HomePageEvent);
+    }
+    break;
+  case HOLD:
+    if (key == 'D'){
+      // Manual Abort STOP
+      // Reset Value
+      num_input = "";
+      turnOffPump();
+      changeStateTo(HomePageEvent);
+    }
+    break;
   }
 }
 
@@ -758,11 +665,18 @@ void greenBoxListener(char key){
   case '7':
   case '8':
   case '9':
-    // TODO: implement water counter
-    Serial.print("save key ");
-    break;
-  case 'B':
-    Serial.print("Reset counter");
+    switch(getPresetMode(key)){
+    case 1:
+      changeStateTo(VolumeModeEvent);
+      break;
+    case 2:
+      changeStateTo(TimeModeEvent);
+      break;
+    }
+    double tmp = getPresetValue(key);
+    char temp[31];
+    dtostrf(tmp, 30, 25, temp);
+    num_input = temp;
     break;
   }
 }
